@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Amoeba Nucleus Fission Lab - Genetic Edition</title>
+    <style>
+        :root {
+            --amoeba-body: rgba(113, 255, 206, 0.6);
+            --nucleus-color: #00ffff; 
+            --centrosome-color: #ffff00; 
+            --bg-color: #000b14;
+            --ui-bg: #111;
+            --text-color: #71ffce;
+        }
+
+        /* Light Theme override */
+        body.light-mode {
+            --bg-color: #e0f2f1;
+            --ui-bg: #ffffff;
+            --text-color: #004d40;
+            --amoeba-body: rgba(0, 150, 136, 0.4);
+        }
+
+        body { 
+            background: var(--bg-color); color: var(--text-color); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center;
+            transition: background 0.5s ease;
+        }
+
+        #canvas-area {
+            width: 100vw; height: 70vh;
+            background: var(--bg-color);
+            position: relative;
+            filter: contrast(18) brightness(1.2); 
+            transition: background 0.5s ease;
+        }
+
+        .amoeba {
+            position: absolute; width: 100px; height: 100px;
+            background: var(--amoeba-body); border-radius: 50%;
+            filter: blur(10px); 
+            transition: left 1.2s ease-in-out, top 1.2s ease-in-out, width 1s, height 1s, background 2s ease;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 5;
+        }
+
+        .nucleus-hub {
+            position: absolute; display: flex; gap: 0px;
+            transition: all 1.2s ease-in-out; z-index: 10;
+        }
+
+        .nucleus {
+            width: 22px; height: 22px;
+            background: var(--nucleus-color); border-radius: 50%;
+            filter: blur(2px); box-shadow: 0 0 12px var(--nucleus-color);
+        }
+
+        .centrosome-hub {
+            position: absolute; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 15;
+        }
+
+        .centrosome {
+            position: absolute; width: 10px; height: 10px;
+            background: var(--centrosome-color); border-radius: 50%;
+            filter: blur(1px); box-shadow: 0 0 15px var(--centrosome-color);
+            transition: all 1s ease;
+        }
+
+        .food {
+            position: absolute; width: 16px; height: 16px;
+            background: #ff3333; border-radius: 50%; filter: blur(5px);
+            transition: transform 0.5s ease;
+        }
+
+        .nucleus-split { gap: 50px !important; }
+        .body-stretch { width: 240px !important; height: 80px !important; border-radius: 30% !important; }
+
+        .ui {
+            z-index: 100; background: var(--ui-bg); padding: 15px;
+            width: 100%; display: flex; justify-content: center; gap: 20px;
+            border-bottom: 2px solid #71ffce; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .stat { border: 1px solid #71ffce; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;}
+        button { background: #71ffce; border: none; padding: 8px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: transform 0.2s;}
+        button:active { transform: scale(0.9); }
+        
+        #theory-panel {
+            width: 100%; height: 20vh; background: #111; color: #ccc;
+            padding: 20px; overflow-y: auto; font-size: 14px; border-top: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="ui">
+    <div class="stat">POPULATION: <span id="count">1</span></div>
+    <button onclick="spawnFood()">Drop Nutrients</button>
+    <button onclick="toggleTheme()" id="theme-btn">☀️ Day Mode</button>
+</div>
+
+<div id="canvas-area">
+    <div class="amoeba" id="amoeba-1" style="left: 45%; top: 40%;" data-energy="0">
+        <div class="nucleus-hub"><div class="nucleus"></div></div>
+        <div class="centrosome-hub"><div class="centrosome"></div></div>
+    </div>
+</div>
+
+<div id="theory-panel">
+    <div style="display: flex; gap: 40px;">
+        <div style="flex: 1;">
+            <h3 style="color: #71ffce; margin-top: 0;">🧬 Theory of Genetic Mutation</h3>
+            <p>In this simulation, mutation occurs during <b>Binary Fission</b>. While asexual reproduction typically creates identical clones, environmental stressors or errors in DNA replication can lead to phenotypic changes. Here, a 20% mutation rate simulates <b>Point Mutations</b> that alter the proteins responsible for the cell's pigment, creating new color strains.</p>
+        </div>
+        <div style="flex: 1;">
+            <h3 style="color: #ffff00; margin-top: 0;">🌟 Proud Amoeba Facts</h3>
+            <ul>
+                <li><b>Immortality:</b> Because they divide to reproduce, an amoeba doesn't "die" of old age—it literally becomes its children!</li>
+                <li><b>Giant Genomes:</b> Some amoebae have 200 times more DNA than humans! They are genetically far more complex than us.</li>
+                <li><b>Brain Power:</b> Despite having no brain, they can navigate mazes and remember where food was located.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        const btn = document.getElementById('theme-btn');
+        btn.innerText = document.body.classList.contains('light-mode') ? "🌙 Night Mode" : "☀️ Day Mode";
+    }
+
+    function lifeEngine() {
+        const amoebae = document.querySelectorAll('.amoeba');
+        const foods = document.querySelectorAll('.food');
+
+        amoebae.forEach(a => {
+            if(a.dataset.busy === "true") return;
+
+            let x = parseFloat(a.style.left);
+            let y = parseFloat(a.style.top);
+
+            let target = null;
+            let minDist = Infinity;
+            foods.forEach(f => {
+                let fx = parseFloat(f.style.left);
+                let fy = parseFloat(f.style.top);
+                let d = Math.hypot(x - fx, y - fy);
+                if (d < minDist) { minDist = d; target = f; }
+            });
+
+            if (target) {
+                x += (parseFloat(target.style.left) - x) * 0.35;
+                y += (parseFloat(target.style.top) - y) * 0.35;
+            } else {
+                x += (Math.random() - 0.5) * 5;
+                y += (Math.random() - 0.5) * 5;
+            }
+
+            a.style.left = x + "%";
+            a.style.top = y + "%";
+
+            const aRect = a.getBoundingClientRect();
+            foods.forEach(f => {
+                const fRect = f.getBoundingClientRect();
+                const dist = Math.hypot(aRect.x + 50 - (fRect.x + 8), aRect.y + 50 - (fRect.y + 8));
+                if (dist < 60) {
+                    f.remove();
+                    let currentEnergy = parseInt(a.dataset.energy || 0) + 34;
+                    a.dataset.energy = currentEnergy;
+                    
+                    if (currentEnergy >= 100) {
+                        a.dataset.energy = 0;
+                        startDivisionSequence(a);
+                    }
+                }
+            });
+        });
+    }
+
+    async function startDivisionSequence(a) {
+        a.dataset.busy = "true";
+        const nHub = a.querySelector('.nucleus-hub');
+        const cHub = a.querySelector('.centrosome-hub');
+
+        nHub.innerHTML = '<div class="nucleus"></div><div class="nucleus"></div>';
+        cHub.innerHTML = '<div class="centrosome"></div><div class="centrosome"></div>';
+
+        setTimeout(() => {
+            nHub.classList.add('nucleus-split');
+            const cs = cHub.querySelectorAll('.centrosome');
+            cs[0].style.transform = "translateX(-50px)";
+            cs[1].style.transform = "translateX(50px)";
+        }, 400);
+
+        setTimeout(() => {
+            a.classList.add('body-stretch');
+        }, 1200);
+
+        setTimeout(() => {
+            completeSplit(a);
+        }, 3000);
+    }
+
+    function completeSplit(parent) {
+        const daughter = parent.cloneNode(true);
+        const area = document.getElementById('canvas-area');
+
+        // Mutation logic: 20% chance
+        if (Math.random() < 0.2) {
+            const hue = Math.floor(Math.random() * 360);
+            daughter.style.backgroundColor = `hsla(${hue}, 80%, 60%, 0.6)`;
+        }
+
+        [parent, daughter].forEach((el, index) => {
+            el.classList.remove('body-stretch');
+            el.dataset.busy = "false";
+            el.dataset.energy = 0;
+            el.style.width = "100px";
+            el.style.height = "100px";
+            el.querySelector('.nucleus-hub').classList.remove('nucleus-split');
+            el.querySelector('.nucleus-hub').innerHTML = '<div class="nucleus"></div>';
+            el.querySelector('.centrosome-hub').innerHTML = '<div class="centrosome"></div>';
+            
+            let currentX = parseFloat(parent.style.left);
+            if(index === 1) { 
+                el.style.left = (currentX + 15) + "%";
+            } else { 
+                el.style.left = (currentX - 5) + "%";
+            }
+        });
+
+        area.appendChild(daughter);
+        document.getElementById('count').innerText = document.querySelectorAll('.amoeba').length;
+    }
+
+    function spawnFood() {
+        for(let i=0; i<3; i++) {
+            const f = document.createElement('div');
+            f.className = 'food';
+            f.style.left = (Math.random() * 90 + 5) + "%";
+            f.style.top = (Math.random() * 80 + 5) + "%";
+            document.getElementById('canvas-area').appendChild(f);
+        }
+    }
+
+    setInterval(lifeEngine, 700);
+    setInterval(spawnFood, 5000);
+    spawnFood();
+</script>
+</body>
+</html>
