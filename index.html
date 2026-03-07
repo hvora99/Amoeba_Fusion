@@ -13,7 +13,6 @@
             --text-color: #71ffce;
         }
 
-        /* Light Theme override */
         body.light-mode {
             --bg-color: #e0f2f1;
             --ui-bg: #ffffff;
@@ -36,13 +35,51 @@
             transition: background 0.5s ease;
         }
 
+        /* AMORPHOUS AMOEBA SHAPE */
         .amoeba {
             position: absolute; width: 100px; height: 100px;
-            background: var(--amoeba-body); border-radius: 50%;
+            background: var(--amoeba-body);
+            /* Irregular blob border-radius */
+            border-radius: 62% 38% 46% 54% / 60% 44% 56% 40%;
             filter: blur(10px); 
             transition: left 1.2s ease-in-out, top 1.2s ease-in-out, width 1s, height 1s, background 2s ease;
             display: flex; justify-content: center; align-items: center;
             z-index: 5;
+            animation: morphBlob 4s ease-in-out infinite;
+        }
+
+        /* Each amoeba gets a slightly offset animation phase via JS */
+        @keyframes morphBlob {
+            0%   { border-radius: 62% 38% 46% 54% / 60% 44% 56% 40%; }
+            14%  { border-radius: 44% 56% 70% 30% / 53% 37% 63% 47%; }
+            28%  { border-radius: 55% 45% 33% 67% / 40% 68% 32% 60%; }
+            42%  { border-radius: 37% 63% 57% 43% / 72% 28% 64% 36%; }
+            56%  { border-radius: 68% 32% 48% 52% / 36% 60% 40% 64%; }
+            70%  { border-radius: 41% 59% 65% 35% / 55% 45% 54% 46%; }
+            85%  { border-radius: 53% 47% 38% 62% / 47% 63% 37% 53%; }
+            100% { border-radius: 62% 38% 46% 54% / 60% 44% 56% 40%; }
+        }
+
+        @keyframes morphBlobAlt {
+            0%   { border-radius: 44% 56% 70% 30% / 53% 37% 63% 47%; }
+            14%  { border-radius: 68% 32% 48% 52% / 36% 60% 40% 64%; }
+            28%  { border-radius: 37% 63% 57% 43% / 72% 28% 64% 36%; }
+            42%  { border-radius: 62% 38% 46% 54% / 60% 44% 56% 40%; }
+            56%  { border-radius: 53% 47% 38% 62% / 47% 63% 37% 53%; }
+            70%  { border-radius: 55% 45% 33% 67% / 40% 68% 32% 60%; }
+            85%  { border-radius: 41% 59% 65% 35% / 55% 45% 54% 46%; }
+            100% { border-radius: 44% 56% 70% 30% / 53% 37% 63% 47%; }
+        }
+
+        @keyframes morphBlobB {
+            0%   { border-radius: 55% 45% 33% 67% / 40% 68% 32% 60%; }
+            14%  { border-radius: 41% 59% 65% 35% / 55% 45% 54% 46%; }
+            28%  { border-radius: 62% 38% 46% 54% / 60% 44% 56% 40%; }
+            42%  { border-radius: 44% 56% 70% 30% / 53% 37% 63% 47%; }
+            56%  { border-radius: 37% 63% 57% 43% / 72% 28% 64% 36%; }
+            70%  { border-radius: 68% 32% 48% 52% / 36% 60% 40% 64%; }
+            85%  { border-radius: 53% 47% 38% 62% / 47% 63% 37% 53%; }
+            100% { border-radius: 55% 45% 33% 67% / 40% 68% 32% 60%; }
         }
 
         .nucleus-hub {
@@ -76,7 +113,13 @@
         }
 
         .nucleus-split { gap: 50px !important; }
-        .body-stretch { width: 240px !important; height: 80px !important; border-radius: 30% !important; }
+
+        /* Stretched amorphous shape during division */
+        .body-stretch {
+            width: 240px !important; height: 80px !important;
+            border-radius: 45% 55% 60% 40% / 30% 70% 30% 70% !important;
+            animation: none !important;
+        }
 
         .ui {
             z-index: 100; background: var(--ui-bg); padding: 15px;
@@ -126,6 +169,21 @@
 </div>
 
 <script>
+    const blobAnimations = ['morphBlob', 'morphBlobAlt', 'morphBlobB'];
+    let animIdx = 0;
+
+    // Assign a random morph animation + random duration offset to each new amoeba
+    function assignBlobStyle(el) {
+        const anim = blobAnimations[animIdx % blobAnimations.length];
+        animIdx++;
+        const duration = (3.5 + Math.random() * 2).toFixed(2);
+        const delay = (Math.random() * -4).toFixed(2);
+        el.style.animation = `${anim} ${duration}s ${delay}s ease-in-out infinite`;
+    }
+
+    // Apply to the initial amoeba
+    assignBlobStyle(document.getElementById('amoeba-1'));
+
     function toggleTheme() {
         document.body.classList.toggle('light-mode');
         const btn = document.getElementById('theme-btn');
@@ -230,6 +288,9 @@
             } else { 
                 el.style.left = (currentX - 5) + "%";
             }
+
+            // Assign fresh unique blob animation to each daughter
+            assignBlobStyle(el);
         });
 
         area.appendChild(daughter);
